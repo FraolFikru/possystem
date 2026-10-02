@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>{{ app_name }}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50:'#f0fdf4',100:'#dcfce7',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534' },
+            accent: { 500:'#f59e0b',600:'#d97706' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak]{display:none!important}
+    .touch-btn{min-height:48px;min-width:48px}
+    .product-card:active{transform:scale(0.97)}
+    .cart-item{transition:all .15s ease}
+    ::-webkit-scrollbar{width:6px;height:6px}
+    ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
+    .low-stock{animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}
+  </style>
+</head>
+<body class="h-full bg-slate-100 text-slate-800 font-sans antialiased select-none">
+
+<!-- ═══════════════════ TOP NAVBAR ═══════════════════ -->
+<nav class="bg-brand-700 text-white shadow-lg sticky top-0 z-50">
+  <div class="max-w-full mx-auto px-3 py-2 flex items-center justify-between gap-2">
+    <div class="flex items-center gap-3">
+      <span class="text-xl font-bold tracking-tight">🏪 {{ app_name }}</span>
+      <span id="mode-badge" class="text-xs bg-brand-800 px-2 py-0.5 rounded-full uppercase tracking-wider">Retail</span>
+    </div>
+
+    <!-- View Switcher -->
+    <div class="flex gap-1 bg-brand-800/50 rounded-lg p-1">
+      <button onclick="switchView('pos')" id="nav-pos" class="nav-btn touch-btn px-3 py-1.5 rounded-md text-sm font-medium bg-white text-brand-800">POS</button>
+      <button onclick="switchView('inventory')" id="nav-inventory" class="nav-btn touch-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-brand-600">Inventory</button>
+      <button onclick="switchView('credit')" id="nav-credit" class="nav-btn touch-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-brand-600">Idda</button>
+      <button onclick="switchView('analytics')" id="nav-analytics" class="nav-btn touch-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-brand-600">Analytics</button>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <select id="mode-select" onchange="changeMode(this.value)" class="text-sm bg-brand-800 border-0 rounded-md px-2 py-1 text-white focus:ring-2 focus:ring-white/50">
+        <option value="retail">Retail</option>
+        <option value="restaurant">Restaurant</option>
+        <option value="pharmacy">Pharmacy</option>
+        <option value="grocery">Grocery</option>
+      </select>
+      <span id="offline-indicator" class="hidden text-xs bg-red-500 px-2 py-1 rounded-full">OFFLINE</span>
+      <span class="text-sm opacity-80">{{ currency }}</span>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════ MAIN CONTENT ═══════════════════ -->
+<main class="h-[calc(100vh-56px)] overflow-hidden">
+
+  <!-- ───────────── POS VIEW ───────────── -->
+  <div id="view-pos" class="view h-full flex flex-col md:flex-row">
+    <!-- LEFT: Product Grid -->
+    <section class="flex-1 flex flex-col min-w-0 bg-white border-r border-slate-200">
+      <div class="p-3 border-b border-slate-200 flex gap-2">
+        <input id="search-input" type="search" placeholder="Search name, SKU, barcode…" 
+               class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+               oninput="filterProducts(this.value)" />
+        <button onclick="loadProducts()" class="touch-btn px-3 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm">↻</button>
+      </div>
+      <div id="category-tabs" class="flex gap-1 px-3 py-2 overflow-x-auto border-b border-slate-100 text-sm"></div>
+      <div id="product-grid" class="flex-1 overflow-y-auto p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 content-start"></div>
+    </section>
+
+    <!-- RIGHT: Cart -->
+    <aside class="w-full md:w-96 lg:w-[420px] flex flex-col bg-slate-50 border-l border-slate-200 shadow-inner">
+      <div class="p-3 bg-brand-600 text-white flex justify-between items-center">
+        <h2 class="font-semibold text-lg">🛒 Cart <span id="cart-count" class="text-sm opacity-80">(0)</span></h2>
+        <button onclick="clearCart()" class="text-sm bg-brand-800/40 hover:bg-brand-800 px-2 py-1 rounded">Clear</button>
+      </div>
+      <div id="cart-items" class="flex-1 overflow-y-auto p-3 space-y-2"></div>
+      <div class="border-t border-slate-200 p-3 space-y-2 bg-white">
+        <div class="flex justify-between text-sm"><span>Subtotal</span><span id="cart-subtotal">0.00</span></div>
+        <div class="flex justify-between text-sm"><span>VAT ({{ (vat_rate * 100)|int }}%)</span><span id="cart-tax">0.00</span></div>
+        <div class="flex justify-between text-sm"><span>Discount</span>
+          <input id="cart-discount" type="number" min="0" step="0.01" value="0" class="w-20 text-right border rounded px-1 py-0.5 text-sm" onchange="recalcCart()" />
+        </div>
+        <div class="flex justify-between text-lg font-bold text-brand-700 border-t pt-2">
+          <span>Total</span><span id="cart-total">0.00 {{ currency }}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button onclick="holdTicket()" class="touch-btn bg-slate-200 hover:bg-slate-300 rounded-lg font-medium text-sm">Hold</button>
+          <button onclick="openCheckout()" class="touch-btn bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold">Checkout</button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ───────────── INVENTORY VIEW ───────────── -->
+  <div id="view-inventory" class="view hidden h-full overflow-y-auto p-4">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">📦 Inventory & BOM</h2>
+        <button onclick="openItemModal()" class="touch-btn bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium">+ Add Item</button>
+      </div>
+      <div class="bg-white rounded-xl shadow overflow-hidden">
+        <table class="w-full text-sm">
+          <thead class="bg-slate-50 text-left text-slate-600">
+            <tr>
+              <th class="px-4 py-3">SKU</th>
+              <th class="px-4 py-3">Name</th>
+              <th class="px-4 py-3">Category</th>
+              <th class="px-4 py-3 text-right">Price</th>
+              <th class="px-4 py-3 text-right">Stock</th>
+              <th class="px-4 py-3">Unit</th>
+              <th class="px-4 py-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventory-table" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────────── CREDIT (IDDA) VIEW ───────────── -->
+  <div id="view-credit" class="view hidden h-full overflow-y-auto p-4">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold">💳 Customer Credit (Idda)</h2>
+        <button onclick="openCustomerModal()" class="touch-btn bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium">+ Customer</button>
+      </div>
+      <div id="credit-list" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+    </div>
+  </div>
+
+  <!-- ───────────── ANALYTICS VIEW ───────────── -->
+  <div id="view-analytics" class="view hidden h-full overflow-y-auto p-4">
+    <div class="max-w-6xl mx-auto space-y-6">
+      <h2 class="text-2xl font-bold">📊 Owner Analytics — Today</h2>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="kpi-cards"></div>
+      <div class="grid md:grid-cols-2 gap-4">
+        <div class="bg-white rounded-xl shadow p-4">
+          <h3 class="font-semibold mb-3">Top Selling Items</h3>
+          <ul id="top-items" class="space-y-2 text-sm"></ul>
+        </div>
+        <div class="bg-white rounded-xl shadow p-4">
+          <h3 class="font-semibold mb-3 text-red-600">⚠️ Low Stock Warnings</h3>
+          <ul id="low-stock" class="space-y-2 text-sm"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ═══════════════════ CHECKOUT MODAL ═══════════════════ -->
+<div id="checkout-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+    <div class="bg-brand-600 text-white px-5 py-3 flex justify-between items-center">
+      <h3 class="font-semibold text-lg">Checkout</h3>
+      <button onclick="closeCheckout()" class="text-2xl leading-none">&times;</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div class="text-center">
+        <div class="text-3xl font-bold text-brand-700" id="checkout-total">0.00</div>
+        <div class="text-sm text-slate-500">Total to collect</div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Payment Method</label>
+        <div class="grid grid-cols-3 gap-2" id="pay-methods">
+          <button data-method="cash" onclick="selectPay('cash')" class="pay-btn touch-btn border-2 border-brand-500 bg-brand-50 rounded-lg py-2 text-sm font-medium">💵 Cash</button>
+          <button data-method="telebirr" onclick="selectPay('telebirr')" class="pay-btn touch-btn border-2 border-slate-200 rounded-lg py-2 text-sm font-medium">📱 Telebirr</button>
+          <button data-method="idda" onclick="selectPay('idda')" class="pay-btn touch-btn border-2 border-slate-200 rounded-lg py-2 text-sm font-medium">📝 Idda</button>
+          <button data-method="mpesa" onclick="selectPay('mpesa')" class="pay-btn touch-btn border-2 border-slate-200 rounded-lg py-2 text-sm font-medium">📱 M-Pesa</button>
+          <button data-method="card" onclick="selectPay('card')" class="pay-btn touch-btn border-2 border-slate-200 rounded-lg py-2 text-sm font-medium">💳 Card</button>
+          <button data-method="mixed" onclick="selectPay('mixed')" class="pay-btn touch-btn border-2 border-slate-200 rounded-lg py-2 text-sm font-medium">🔀 Mixed</button>
+        </div>
+      </div>
+
+      <div id="idda-customer-select" class="hidden">
+        <label class="block text-sm font-medium mb-1">Customer (for Idda)</label>
+        <select id="checkout-customer" class="w-full border rounded-lg px-3 py-2 text-sm"></select>
+      </div>
+
+      <div id="mixed-amounts" class="hidden space-y-2 text-sm">
+        <div class="flex gap-2"><label class="w-24">Cash</label><input type="number" id="mix-cash" class="flex-1 border rounded px-2 py-1" value="0" step="0.01" /></div>
+        <div class="flex gap-2"><label class="w-24">Telebirr</label><input type="number" id="mix-telebirr" class="flex-1 border rounded px-2 py-1" value="0" step="0.01" /></div>
+        <div class="flex gap-2"><label class="w-24">Idda</label><input type="number" id="mix-idda" class="flex-1 border rounded px-2 py-1" value="0" step="0.01" /></div>
+      </div>
+
+      <button onclick="completeCheckout()" class="w-full touch-btn bg-brand-600 hover:bg-brand-700 text-white py-3 rounded-xl font-bold text-lg">
+        Complete Sale
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════ ITEM MODAL ═══════════════════ -->
+<div id="item-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="bg-brand-600 text-white px-5 py-3 flex justify-between items-center sticky top-0">
+      <h3 class="font-semibold" id="item-modal-title">Add Item</h3>
+      <button onclick="closeItemModal()" class="text-2xl">&times;</button>
+    </div>
+    <form id="item-form" class="p-5 space-y-3" onsubmit="saveItem(event)">
+      <input type="hidden" id="item-id" />
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-medium">SKU *</label><input id="item-sku" required class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="text-xs font-medium">Barcode</label><input id="item-barcode" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      </div>
+      <div><label class="text-xs font-medium">Name *</label><input id="item-name" required class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-medium">Category</label><input id="item-category" value="General" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="text-xs font-medium">Unit</label><input id="item-unit" value="pcs" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-medium">Sell Price *</label><input id="item-price" type="number" step="0.01" required class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="text-xs font-medium">Cost Price</label><input id="item-cost" type="number" step="0.01" value="0" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-medium">Stock Qty</label><input id="item-stock" type="number" step="0.01" value="0" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="text-xs font-medium">Low Stock Alert</label><input id="item-low" type="number" step="0.01" value="5" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3" id="variant-fields">
+        <div><label class="text-xs font-medium">Size</label><input id="item-size" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+        <div><label class="text-xs font-medium">Color</label><input id="item-color" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      </div>
+      <div class="flex gap-4 text-sm">
+        <label class="flex items-center gap-1"><input type="checkbox" id="item-batch" /> Requires Batch</label>
+        <label class="flex items-center gap-1"><input type="checkbox" id="item-expiry" /> Requires Expiry</label>
+        <label class="flex items-center gap-1"><input type="checkbox" id="item-recipe" /> Is Recipe (BOM)</label>
+      </div>
+      <button type="submit" class="w-full touch-btn bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg font-semibold">Save Item</button>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════ CUSTOMER MODAL ═══════════════════ -->
+<div id="customer-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+    <div class="bg-brand-600 text-white px-5 py-3 flex justify-between items-center">
+      <h3 class="font-semibold">New Customer</h3>
+      <button onclick="closeCustomerModal()" class="text-2xl">&times;</button>
+    </div>
+    <form class="p-5 space-y-3" onsubmit="saveCustomer(event)">
+      <div><label class="text-xs font-medium">Code *</label><input id="cust-code" required class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      <div><label class="text-xs font-medium">Name *</label><input id="cust-name" required class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      <div><label class="text-xs font-medium">Phone</label><input id="cust-phone" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      <div><label class="text-xs font-medium">Credit Limit</label><input id="cust-limit" type="number" value="0" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
+      <button type="submit" class="w-full touch-btn bg-brand-600 text-white py-2.5 rounded-lg font-semibold">Save</button>
+    </form>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-6 z-[70] hidden bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg text-sm max-w-sm"></div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   SME POS — Vanilla JS Client
+   ═══════════════════════════════════════════════════════════ */
+const API = '';
+const CURRENCY = '{{ currency }}';
+const VAT = {{ vat_rate }};
+
+let products = [];
+let cart = [];          // {item, qty, discount}
+let currentPay = 'cash';
+let currentView = 'pos';
+let customers = [];
+
+// ─── Init ─────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([loadProducts(), loadMode(), loadCustomers()]);
+  updateOnlineStatus();
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+});
+
+function updateOnlineStatus() {
+  const el = document.getElementById('offline-indicator');
+  if (navigator.onLine) el.classList.add('hidden');
+  else el.classList.remove('hidden');
+}
+
+// ─── Views ────────────────────────────────────────────────
+function switchView(name) {
+  currentView = name;
+  document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+  document.getElementById('view-' + name).classList.remove('hidden');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.remove('bg-white', 'text-brand-800');
+    b.classList.add('hover:bg-brand-600');
+  });
+  const active = document.getElementById('nav-' + name);
+  active.classList.add('bg-white', 'text-brand-800');
+  active.classList.remove('hover:bg-brand-600');
+
+  if (name === 'inventory') renderInventory();
+  if (name === 'credit') loadCreditBalances();
+  if (name === 'analytics') loadAnalytics();
+}
+
+// ─── Products ─────────────────────────────────────────────
+async function loadProducts() {
+  try {
+    const res = await fetch(API + '/api/items');
+    products = await res.json();
+    renderProducts(products);
+    renderCategories();
+  } catch (e) {
+    toast('Failed to load products', true);
+  }
+}
+
+function renderCategories() {
+  const cats = [...new Set(products.map(p => p.category))];
+  const el = document.getElementById('category-tabs');
+  el.innerHTML = `<button onclick="filterProducts('', true)" class="cat-btn px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-medium whitespace-nowrap">All</button>` +
+    cats.map(c => `<button onclick="filterByCategory('${c}')" class="cat-btn px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-medium whitespace-nowrap">${c}</button>`).join('');
+}
+
+function filterByCategory(cat) {
+  renderProducts(products.filter(p => p.category === cat));
+}
+
+function filterProducts(q, reset) {
+  if (reset || !q) return renderProducts(products);
+  const low = q.toLowerCase();
+  renderProducts(products.filter(p =>
+    p.name.toLowerCase().includes(low) ||
+    p.sku.toLowerCase().includes(low) ||
+    (p.barcode && p.barcode.includes(low))
+  ));
+}
+
+function renderProducts(list) {
+  const grid = document.getElementById('product-grid');
+  if (!list.length) {
+    grid.innerHTML = '<p class="col-span-full text-center text-slate-400 py-10">No products found</p>';
+    return;
+  }
+  grid.innerHTML = list.map(p => {
+    const low = p.stock_qty <= p.low_stock_threshold;
+    const stockCls = low ? 'text-red-600 low-stock' : 'text-slate-500';
+    return `
+      <button onclick="addToCart(${p.id})" class="product-card touch-btn bg-white border border-slate-200 rounded-xl p-3 text-left shadow-sm hover:shadow-md hover:border-brand-300 transition">
+        <div class="font-medium text-sm leading-tight line-clamp-2 mb-1">${esc(p.name)}</div>
+        <div class="text-brand-700 font-bold">${fmt(p.unit_price)}</div>
+        <div class="text-xs ${stockCls} mt-1">${p.stock_qty} ${p.unit}${low ? ' ⚠️' : ''}</div>
+        ${p.size || p.color ? `<div class="text-xs text-slate-400 mt-0.5">${[p.size,p.color].filter(Boolean).join(' / ')}</div>` : ''}
+      </button>`;
+  }).join('');
+}
+
+// ─── Cart ─────────────────────────────────────────────────
+function addToCart(itemId) {
+  const item = products.find(p => p.id === itemId);
+  if (!item) return;
+  if (item.stock_qty <= 0) return toast('Out of stock', true);
+  const existing = cart.find(c => c.item.id === itemId);
+  if (existing) existing.qty += 1;
+  else cart.push({ item, qty: 1, discount: 0 });
+  renderCart();
+}
+
+function changeQty(idx, delta) {
+  cart[idx].qty += delta;
+  if (cart[idx].qty <= 0) cart.splice(idx, 1);
+  renderCart();
+}
+
+function clearCart() {
+  cart = [];
+  document.getElementById('cart-discount').value = 0;
+  renderCart();
+}
+
+function recalcCart() { renderCart(); }
+
+function renderCart() {
+  const el = document.getElementById('cart-items');
+  document.getElementById('cart-count').textContent = `(${cart.reduce((s,c)=>s+c.qty,0)})`;
+  if (!cart.length) {
+    el.innerHTML = '<p class="text-center text-slate-400 py-8 text-sm">Cart is empty</p>';
+  } else {
+    el.innerHTML = cart.map((c, i) => `
+      <div class="cart-item bg-white rounded-lg p-2.5 border border-slate-100 flex gap-2 items-center">
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-medium truncate">${esc(c.item.name)}</div>
+          <div class="text-xs text-slate-500">${fmt(c.item.unit_price)} × ${c.qty}</div>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="changeQty(${i},-1)" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-lg leading-none">−</button>
+          <span class="w-6 text-center text-sm font-medium">${c.qty}</span>
+          <button onclick="changeQty(${i},1)" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-lg leading-none">+</button>
+        </div>
+        <div class="text-sm font-semibold w-16 text-right">${fmt(c.item.unit_price * c.qty)}</div>
+      </div>`).join('');
+  }
+  const sub = cart.reduce((s,c) => s + c.item.unit_price * c.qty, 0);
+  const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
+  const tax = (sub - discount) * VAT;
+  const total = sub - discount + tax;
+  document.getElementById('cart-subtotal').textContent = fmt(sub);
+  document.getElementById('cart-tax').textContent = fmt(tax);
+  document.getElementById('cart-total').textContent = fmt(total) + ' ' + CURRENCY;
+}
+
+// ─── Checkout ─────────────────────────────────────────────
+function openCheckout() {
+  if (!cart.length) return toast('Cart is empty', true);
+  const sub = cart.reduce((s,c) => s + c.item.unit_price * c.qty, 0);
+  const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
+  const total = sub - discount + (sub - discount) * VAT;
+  document.getElementById('checkout-total').textContent = fmt(total) + ' ' + CURRENCY;
+  selectPay('cash');
+  document.getElementById('checkout-modal').classList.remove('hidden');
+  document.getElementById('checkout-modal').classList.add('flex');
+}
+
+function closeCheckout() {
+  document.getElementById('checkout-modal').classList.add('hidden');
+  document.getElementById('checkout-modal').classList.remove('flex');
+}
+
+function selectPay(method) {
+  currentPay = method;
+  document.querySelectorAll('.pay-btn').forEach(b => {
+    b.classList.remove('border-brand-500', 'bg-brand-50');
+    b.classList.add('border-slate-200');
+  });
+  const btn = document.querySelector(`[data-method="${method}"]`);
+  if (btn) {
+    btn.classList.add('border-brand-500', 'bg-brand-50');
+    btn.classList.remove('border-slate-200');
+  }
+  document.getElementById('idda-customer-select').classList.toggle('hidden', method !== 'idda' && method !== 'mixed');
+  document.getElementById('mixed-amounts').classList.toggle('hidden', method !== 'mixed');
+}
+
+async function completeCheckout() {
+  const sub = cart.reduce((s,c) => s + c.item.unit_price * c.qty, 0);
+  const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
+  const total = sub - discount + (sub - discount) * VAT;
+
+  const body = {
+    items: cart.map(c => ({
+      item_id: c.item.id,
+      quantity: c.qty,
+      unit_price: c.item.unit_price,
+      discount: c.discount || 0
+    })),
+    payment_method: currentPay,
+    discount_amount: discount,
+    is_offline: !navigator.onLine,
+    amount_cash: 0, amount_telebirr: 0, amount_mpesa: 0, amount_idda: 0, amount_card: 0
+  };
+
+  if (currentPay === 'cash') body.amount_cash = total;
+  else if (currentPay === 'telebirr') body.amount_telebirr = total;
+  else if (currentPay === 'mpesa') body.amount_mpesa = total;
+  else if (currentPay === 'idda') {
+    body.amount_idda = total;
+    const cid = document.getElementById('checkout-customer').value;
+    if (!cid) return toast('Select a customer for Idda', true);
+    body.customer_id = parseInt(cid);
+  } else if (currentPay === 'card') body.amount_card = total;
+  else if (currentPay === 'mixed') {
+    body.amount_cash = parseFloat(document.getElementById('mix-cash').value) || 0;
+    body.amount_telebirr = parseFloat(document.getElementById('mix-telebirr').value) || 0;
+    body.amount_idda = parseFloat(document.getElementById('mix-idda').value) || 0;
+    if (body.amount_idda > 0) {
+      const cid = document.getElementById('checkout-customer').value;
+      if (!cid) return toast('Select customer for Idda portion', true);
+      body.customer_id = parseInt(cid);
+    }
+  }
+
+  try {
+    const res = await fetch(API + '/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Checkout failed');
+    }
+    const txn = await res.json();
+    toast(`Sale complete! Ref: ${txn.reference}`);
+    clearCart();
+    closeCheckout();
+    await loadProducts(); // refresh stock
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function holdTicket() {
+  if (!cart.length) return toast('Cart empty', true);
+  toast('Ticket held (local only for demo)');
+  // In production would POST with hold:true
+}
+
+// ─── Inventory ────────────────────────────────────────────
+function renderInventory() {
+  const tbody = document.getElementById('inventory-table');
+  tbody.innerHTML = products.map(p => {
+    const low = p.stock_qty <= p.low_stock_threshold;
+    return `<tr class="hover:bg-slate-50">
+      <td class="px-4 py-2.5 font-mono text-xs">${esc(p.sku)}</td>
+      <td class="px-4 py-2.5">${esc(p.name)}</td>
+      <td class="px-4 py-2.5 text-slate-500">${esc(p.category)}</td>
+      <td class="px-4 py-2.5 text-right font-medium">${fmt(p.unit_price)}</td>
+      <td class="px-4 py-2.5 text-right ${low ? 'text-red-600 font-semibold' : ''}">${p.stock_qty}</td>
+      <td class="px-4 py-2.5">${p.unit}</td>
+      <td class="px-4 py-2.5">
+        <button onclick="editItem(${p.id})" class="text-brand-600 hover:underline text-xs mr-2">Edit</button>
+        <button onclick="quickAddStock(${p.id})" class="text-slate-500 hover:underline text-xs">+Stock</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openItemModal(item = null) {
+  document.getElementById('item-modal-title').textContent = item ? 'Edit Item' : 'Add Item';
+  document.getElementById('item-id').value = item ? item.id : '';
+  document.getElementById('item-sku').value = item ? item.sku : '';
+  document.getElementById('item-sku').disabled = !!item;
+  document.getElementById('item-barcode').value = item?.barcode || '';
+  document.getElementById('item-name').value = item?.name || '';
+  document.getElementById('item-category').value = item?.category || 'General';
+  document.getElementById('item-unit').value = item?.unit || 'pcs';
+  document.getElementById('item-price').value = item?.unit_price || '';
+  document.getElementById('item-cost').value = item?.cost_price || 0;
+  document.getElementById('item-stock').value = item?.stock_qty || 0;
+  document.getElementById('item-low').value = item?.low_stock_threshold || 5;
+  document.getElementById('item-size').value = item?.size || '';
+  document.getElementById('item-color').value = item?.color || '';
+  document.getElementById('item-batch').checked = item?.requires_batch || false;
+  document.getElementById('item-expiry').checked = item?.requires_expiry || false;
+  document.getElementById('item-recipe').checked = item?.is_recipe || false;
+  document.getElementById('item-modal').classList.remove('hidden');
+  document.getElementById('item-modal').classList.add('flex');
+}
+
+function closeItemModal() {
+  document.getElementById('item-modal').classList.add('hidden');
+  document.getElementById('item-modal').classList.remove('flex');
+}
+
+function editItem(id) {
+  const item = products.find(p => p.id === id);
+  if (item) openItemModal(item);
+}
+
+async function saveItem(e) {
+  e.preventDefault();
+  const id = document.getElementById('item-id').value;
+  const body = {
+    sku: document.getElementById('item-sku').value,
+    barcode: document.getElementById('item-barcode').value || null,
+    name: document.getElementById('item-name').value,
+    category: document.getElementById('item-category').value,
+    unit: document.getElementById('item-unit').value,
+    unit_price: parseFloat(document.getElementById('item-price').value),
+    cost_price: parseFloat(document.getElementById('item-cost').value) || 0,
+    stock_qty: parseFloat(document.getElementById('item-stock').value) || 0,
+    low_stock_threshold: parseFloat(document.getElementById('item-low').value) || 5,
+    size: document.getElementById('item-size').value || null,
+    color: document.getElementById('item-color').value || null,
+    requires_batch: document.getElementById('item-batch').checked,
+    requires_expiry: document.getElementById('item-expiry').checked,
+    is_recipe: document.getElementById('item-recipe').checked,
+  };
+  try {
+    const url = id ? `/api/items/${id}` : '/api/items';
+    const method = id ? 'PATCH' : 'POST';
+    const res = await fetch(API + url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Save failed');
+    toast(id ? 'Item updated' : 'Item created');
+    closeItemModal();
+    await loadProducts();
+    if (currentView === 'inventory') renderInventory();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+async function quickAddStock(id) {
+  const qty = prompt('Quantity to add:', '10');
+  if (!qty || isNaN(qty)) return;
+  try {
+    const res = await fetch(API + `/api/items/${id}/stock?quantity=${qty}`, { method: 'POST' });
+    if (!res.ok) throw new Error('Failed');
+    toast('Stock added');
+    await loadProducts();
+    renderInventory();
+  } catch {
+    toast('Failed to add stock', true);
+  }
+}
+
+// ─── Credit / Idda ────────────────────────────────────────
+async function loadCustomers() {
+  try {
+    const res = await fetch(API + '/api/customers');
+    customers = await res.json();
+    const sel = document.getElementById('checkout-customer');
+    sel.innerHTML = '<option value="">— Select —</option>' +
+      customers.map(c => `<option value="${c.id}">${esc(c.name)} (${c.phone || c.code})</option>`).join('');
+  } catch {}
+}
+
+async function loadCreditBalances() {
+  try {
+    const res = await fetch(API + '/api/customers/balances');
+    const balances = await res.json();
+    const el = document.getElementById('credit-list');
+    if (!balances.length) {
+      el.innerHTML = '<p class="col-span-full text-center text-slate-400 py-10">No outstanding credit</p>';
+      return;
+    }
+    el.innerHTML = balances.map(b => `
+      <div class="bg-white rounded-xl shadow p-4 border border-slate-100">
+        <div class="font-semibold">${esc(b.customer_name)}</div>
+        <div class="text-xs text-slate-500 mb-2">${b.phone || ''}</div>
+        <div class="text-2xl font-bold text-red-600">${fmt(b.current_balance)} ${CURRENCY}</div>
+        <div class="text-xs text-slate-400 mt-1">Limit: ${fmt(b.credit_limit)} · Available: ${fmt(b.available_credit)}</div>
+        <div class="mt-3 flex gap-2">
+          <button onclick="repayCredit(${b.customer_id})" class="flex-1 text-xs bg-brand-100 text-brand-800 py-1.5 rounded-lg hover:bg-brand-200">Record Payment</button>
+          <button onclick="remindCustomer('${esc(b.customer_name)}', ${b.current_balance}, '${b.phone || ''}')" class="flex-1 text-xs bg-slate-100 py-1.5 rounded-lg hover:bg-slate-200">Remind</button>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    toast('Failed to load credits', true);
+  }
+}
+
+async function repayCredit(customerId) {
+  const amount = prompt('Repayment amount (ETB):');
+  if (!amount || isNaN(amount) || amount <= 0) return;
+  try {
+    const res = await fetch(API + `/api/customers/${customerId}/repay?amount=${amount}`, { method: 'POST' });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+    toast('Repayment recorded');
+    loadCreditBalances();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function remindCustomer(name, balance, phone) {
+  const msg = `Dear ${name}, your outstanding balance is ${fmt(balance)} ${CURRENCY}. Please settle at your earliest convenience. Thank you!`;
+  if (phone) {
+    // Pre-fill SMS / Telegram style
+    const sms = `sms:${phone}?body=${encodeURIComponent(msg)}`;
+    window.open(sms, '_blank');
+  }
+  navigator.clipboard?.writeText(msg);
+  toast('Reminder copied to clipboard' + (phone ? ' & SMS opened' : ''));
+}
+
+function openCustomerModal() {
+  document.getElementById('customer-modal').classList.remove('hidden');
+  document.getElementById('customer-modal').classList.add('flex');
+}
+function closeCustomerModal() {
+  document.getElementById('customer-modal').classList.add('hidden');
+  document.getElementById('customer-modal').classList.remove('flex');
+}
+
+async function saveCustomer(e) {
+  e.preventDefault();
+  const body = {
+    code: document.getElementById('cust-code').value,
+    name: document.getElementById('cust-name').value,
+    phone: document.getElementById('cust-phone').value || null,
+    credit_limit: parseFloat(document.getElementById('cust-limit').value) || 0
+  };
+  try {
+    const res = await fetch(API + '/api/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+    toast('Customer created');
+    closeCustomerModal();
+    await loadCustomers();
+  } catch (err) {
+    toast(err.message, true);
+  }
+}
+
+// ─── Analytics ────────────────────────────────────────────
+async function loadAnalytics() {
+  try {
+    const res = await fetch(API + '/api/transactions/today');
+    const data = await res.json();
+    document.getElementById('kpi-cards').innerHTML = `
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="text-xs text-slate-500 uppercase">Revenue</div>
+        <div class="text-2xl font-bold text-brand-700">${fmt(data.total_revenue)} ${CURRENCY}</div>
+        <div class="text-xs text-slate-400">${data.transaction_count} sales</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="text-xs text-slate-500 uppercase">Cash</div>
+        <div class="text-2xl font-bold">${fmt(data.cash_total)}</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="text-xs text-slate-500 uppercase">Telebirr</div>
+        <div class="text-2xl font-bold">${fmt(data.telebirr_total)}</div>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4">
+        <div class="text-xs text-slate-500 uppercase">Idda Outstanding</div>
+        <div class="text-2xl font-bold text-red-600">${fmt(data.total_credit_outstanding)}</div>
+      </div>`;
+    document.getElementById('top-items').innerHTML = data.top_items.length
+      ? data.top_items.map((t,i) => `<li class="flex justify-between"><span>${i+1}. ${esc(t.name)}</span><span class="font-medium">${fmt(t.sales)}</span></li>`).join('')
+      : '<li class="text-slate-400">No sales yet today</li>';
+    document.getElementById('low-stock').innerHTML = data.low_stock_alerts.length
+      ? data.low_stock_alerts.map(a => `<li class="flex justify-between text-red-600"><span>${esc(a.name)}</span><span>${a.stock_qty} ${a.unit}</span></li>`).join('')
+      : '<li class="text-slate-400">All stock levels OK</li>';
+  } catch {
+    toast('Failed to load analytics', true);
+  }
+}
+
+// ─── Mode ─────────────────────────────────────────────────
+async function loadMode() {
+  try {
+    const res = await fetch(API + '/api/system/mode');
+    const data = await res.json();
+    document.getElementById('mode-select').value = data.mode;
+    document.getElementById('mode-badge').textContent = data.mode;
+  } catch {}
+}
+
+async function changeMode(mode) {
+  try {
+    await fetch(API + '/api/system/mode', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode })
+    });
+    document.getElementById('mode-badge').textContent = mode;
+    toast(`Switched to ${mode} mode`);
+  } catch {
+    toast('Failed to change mode', true);
+  }
+}
+
+// ─── Helpers ──────────────────────────────────────────────
+function fmt(n) {
+  return Number(n).toLocaleString('en-ET', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.remove('hidden', 'bg-red-600', 'bg-slate-800');
+  el.classList.add(isError ? 'bg-red-600' : 'bg-slate-800');
+  setTimeout(() => el.classList.add('hidden'), 3200);
+}
+</script>
+</body>
+</html>
