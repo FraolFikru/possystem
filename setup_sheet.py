@@ -2,7 +2,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ========== CONFIG ==========
-SHEET_ID = "PASTE_YOUR_SHEET_ID_HERE"          # ← put your Sheet ID
+SHEET_ID = "1ojcGLMq-uc3x-p4Qc02pfmAumDjY-L5mmxfKjbcZ6pc/edit?gid=0#gid=0"          # ← put your Sheet ID
 CREDENTIALS_FILE = "service_account.json"
 # ============================
 
