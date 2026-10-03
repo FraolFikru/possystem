@@ -11,17 +11,14 @@
         extend: {
           colors: {
             brand: { 50:'#f0fdf4',100:'#dcfce7',500:'#22c55e',600:'#16a34a',700:'#15803d',800:'#166534' },
-            accent: { 500:'#f59e0b',600:'#d97706' }
           }
         }
       }
     }
   </script>
   <style>
-    [x-cloak]{display:none!important}
     .touch-btn{min-height:48px;min-width:48px}
     .product-card:active{transform:scale(0.97)}
-    .cart-item{transition:all .15s ease}
     ::-webkit-scrollbar{width:6px;height:6px}
     ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px}
     .low-stock{animation:pulse 2s infinite}
@@ -30,7 +27,7 @@
 </head>
 <body class="h-full bg-slate-100 text-slate-800 font-sans antialiased select-none">
 
-<!-- ═══════════════════ TOP NAVBAR ═══════════════════ -->
+<!-- TOP NAVBAR -->
 <nav class="bg-brand-700 text-white shadow-lg sticky top-0 z-50">
   <div class="max-w-full mx-auto px-3 py-2 flex items-center justify-between gap-2">
     <div class="flex items-center gap-3">
@@ -38,7 +35,6 @@
       <span id="mode-badge" class="text-xs bg-brand-800 px-2 py-0.5 rounded-full uppercase tracking-wider">Retail</span>
     </div>
 
-    <!-- View Switcher -->
     <div class="flex gap-1 bg-brand-800/50 rounded-lg p-1">
       <button onclick="switchView('pos')" id="nav-pos" class="nav-btn touch-btn px-3 py-1.5 rounded-md text-sm font-medium bg-white text-brand-800">POS</button>
       <button onclick="switchView('inventory')" id="nav-inventory" class="nav-btn touch-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-brand-600">Inventory</button>
@@ -47,28 +43,26 @@
     </div>
 
     <div class="flex items-center gap-2">
-      <select id="mode-select" onchange="changeMode(this.value)" class="text-sm bg-brand-800 border-0 rounded-md px-2 py-1 text-white focus:ring-2 focus:ring-white/50">
+      <select id="mode-select" onchange="changeMode(this.value)" class="text-sm bg-brand-800 border-0 rounded-md px-2 py-1 text-white">
         <option value="retail">Retail</option>
         <option value="restaurant">Restaurant</option>
         <option value="pharmacy">Pharmacy</option>
         <option value="grocery">Grocery</option>
       </select>
-      <span id="offline-indicator" class="hidden text-xs bg-red-500 px-2 py-1 rounded-full">OFFLINE</span>
       <span class="text-sm opacity-80">{{ currency }}</span>
     </div>
   </div>
 </nav>
 
-<!-- ═══════════════════ MAIN CONTENT ═══════════════════ -->
+<!-- MAIN CONTENT -->
 <main class="h-[calc(100vh-56px)] overflow-hidden">
 
-  <!-- ───────────── POS VIEW ───────────── -->
+  <!-- POS VIEW -->
   <div id="view-pos" class="view h-full flex flex-col md:flex-row">
-    <!-- LEFT: Product Grid -->
     <section class="flex-1 flex flex-col min-w-0 bg-white border-r border-slate-200">
       <div class="p-3 border-b border-slate-200 flex gap-2">
         <input id="search-input" type="search" placeholder="Search name, SKU, barcode…" 
-               class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none"
+               class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 outline-none"
                oninput="filterProducts(this.value)" />
         <button onclick="loadProducts()" class="touch-btn px-3 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm">↻</button>
       </div>
@@ -76,8 +70,7 @@
       <div id="product-grid" class="flex-1 overflow-y-auto p-3 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 content-start"></div>
     </section>
 
-    <!-- RIGHT: Cart -->
-    <aside class="w-full md:w-96 lg:w-[420px] flex flex-col bg-slate-50 border-l border-slate-200 shadow-inner">
+    <aside class="w-full md:w-96 lg:w-[420px] flex flex-col bg-slate-50 border-l border-slate-200">
       <div class="p-3 bg-brand-600 text-white flex justify-between items-center">
         <h2 class="font-semibold text-lg">🛒 Cart <span id="cart-count" class="text-sm opacity-80">(0)</span></h2>
         <button onclick="clearCart()" class="text-sm bg-brand-800/40 hover:bg-brand-800 px-2 py-1 rounded">Clear</button>
@@ -93,18 +86,18 @@
           <span>Total</span><span id="cart-total">0.00 {{ currency }}</span>
         </div>
         <div class="grid grid-cols-2 gap-2 pt-1">
-          <button onclick="holdTicket()" class="touch-btn bg-slate-200 hover:bg-slate-300 rounded-lg font-medium text-sm">Hold</button>
+          <button onclick="clearCart()" class="touch-btn bg-slate-200 hover:bg-slate-300 rounded-lg font-medium text-sm">Clear</button>
           <button onclick="openCheckout()" class="touch-btn bg-brand-600 hover:bg-brand-700 text-white rounded-lg font-semibold">Checkout</button>
         </div>
       </div>
     </aside>
   </div>
 
-  <!-- ───────────── INVENTORY VIEW ───────────── -->
+  <!-- INVENTORY VIEW -->
   <div id="view-inventory" class="view hidden h-full overflow-y-auto p-4">
     <div class="max-w-6xl mx-auto">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-bold">📦 Inventory & BOM</h2>
+        <h2 class="text-2xl font-bold">📦 Inventory</h2>
         <button onclick="openItemModal()" class="touch-btn bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-lg font-medium">+ Add Item</button>
       </div>
       <div class="bg-white rounded-xl shadow overflow-hidden">
@@ -126,7 +119,7 @@
     </div>
   </div>
 
-  <!-- ───────────── CREDIT (IDDA) VIEW ───────────── -->
+  <!-- CREDIT (IDDA) VIEW -->
   <div id="view-credit" class="view hidden h-full overflow-y-auto p-4">
     <div class="max-w-5xl mx-auto">
       <div class="flex justify-between items-center mb-4">
@@ -137,16 +130,12 @@
     </div>
   </div>
 
-  <!-- ───────────── ANALYTICS VIEW ───────────── -->
+  <!-- ANALYTICS VIEW -->
   <div id="view-analytics" class="view hidden h-full overflow-y-auto p-4">
     <div class="max-w-6xl mx-auto space-y-6">
       <h2 class="text-2xl font-bold">📊 Owner Analytics — Today</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="kpi-cards"></div>
       <div class="grid md:grid-cols-2 gap-4">
-        <div class="bg-white rounded-xl shadow p-4">
-          <h3 class="font-semibold mb-3">Top Selling Items</h3>
-          <ul id="top-items" class="space-y-2 text-sm"></ul>
-        </div>
         <div class="bg-white rounded-xl shadow p-4">
           <h3 class="font-semibold mb-3 text-red-600">⚠️ Low Stock Warnings</h3>
           <ul id="low-stock" class="space-y-2 text-sm"></ul>
@@ -156,7 +145,7 @@
   </div>
 </main>
 
-<!-- ═══════════════════ CHECKOUT MODAL ═══════════════════ -->
+<!-- CHECKOUT MODAL -->
 <div id="checkout-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
     <div class="bg-brand-600 text-white px-5 py-3 flex justify-between items-center">
@@ -199,7 +188,7 @@
   </div>
 </div>
 
-<!-- ═══════════════════ ITEM MODAL ═══════════════════ -->
+<!-- ITEM MODAL -->
 <div id="item-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
     <div class="bg-brand-600 text-white px-5 py-3 flex justify-between items-center sticky top-0">
@@ -225,21 +214,16 @@
         <div><label class="text-xs font-medium">Stock Qty</label><input id="item-stock" type="number" step="0.01" value="0" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
         <div><label class="text-xs font-medium">Low Stock Alert</label><input id="item-low" type="number" step="0.01" value="5" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
       </div>
-      <div class="grid grid-cols-2 gap-3" id="variant-fields">
+      <div class="grid grid-cols-2 gap-3">
         <div><label class="text-xs font-medium">Size</label><input id="item-size" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
         <div><label class="text-xs font-medium">Color</label><input id="item-color" class="w-full border rounded-lg px-3 py-2 text-sm" /></div>
-      </div>
-      <div class="flex gap-4 text-sm">
-        <label class="flex items-center gap-1"><input type="checkbox" id="item-batch" /> Requires Batch</label>
-        <label class="flex items-center gap-1"><input type="checkbox" id="item-expiry" /> Requires Expiry</label>
-        <label class="flex items-center gap-1"><input type="checkbox" id="item-recipe" /> Is Recipe (BOM)</label>
       </div>
       <button type="submit" class="w-full touch-btn bg-brand-600 hover:bg-brand-700 text-white py-2.5 rounded-lg font-semibold">Save Item</button>
     </form>
   </div>
 </div>
 
-<!-- ═══════════════════ CUSTOMER MODAL ═══════════════════ -->
+<!-- CUSTOMER MODAL -->
 <div id="customer-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/50 p-4">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
     <div class="bg-brand-600 text-white px-5 py-3 flex justify-between items-center">
@@ -260,34 +244,20 @@
 <div id="toast" class="fixed bottom-6 right-6 z-[70] hidden bg-slate-800 text-white px-4 py-3 rounded-lg shadow-lg text-sm max-w-sm"></div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════
-   SME POS — Vanilla JS Client
-   ═══════════════════════════════════════════════════════════ */
 const API = '';
 const CURRENCY = '{{ currency }}';
 const VAT = {{ vat_rate }};
 
 let products = [];
-let cart = [];          // {item, qty, discount}
+let cart = [];
 let currentPay = 'cash';
 let currentView = 'pos';
 let customers = [];
 
-// ─── Init ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([loadProducts(), loadMode(), loadCustomers()]);
-  updateOnlineStatus();
-  window.addEventListener('online', updateOnlineStatus);
-  window.addEventListener('offline', updateOnlineStatus);
 });
 
-function updateOnlineStatus() {
-  const el = document.getElementById('offline-indicator');
-  if (navigator.onLine) el.classList.add('hidden');
-  else el.classList.remove('hidden');
-}
-
-// ─── Views ────────────────────────────────────────────────
 function switchView(name) {
   currentView = name;
   document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
@@ -305,7 +275,6 @@ function switchView(name) {
   if (name === 'analytics') loadAnalytics();
 }
 
-// ─── Products ─────────────────────────────────────────────
 async function loadProducts() {
   try {
     const res = await fetch(API + '/api/items');
@@ -320,8 +289,8 @@ async function loadProducts() {
 function renderCategories() {
   const cats = [...new Set(products.map(p => p.category))];
   const el = document.getElementById('category-tabs');
-  el.innerHTML = `<button onclick="filterProducts('', true)" class="cat-btn px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-medium whitespace-nowrap">All</button>` +
-    cats.map(c => `<button onclick="filterByCategory('${c}')" class="cat-btn px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-medium whitespace-nowrap">${c}</button>`).join('');
+  el.innerHTML = `<button onclick="filterProducts('', true)" class="px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-medium">All</button>` +
+    cats.map(c => `<button onclick="filterByCategory('${c}')" class="px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-xs font-medium">${c}</button>`).join('');
 }
 
 function filterByCategory(cat) {
@@ -332,9 +301,9 @@ function filterProducts(q, reset) {
   if (reset || !q) return renderProducts(products);
   const low = q.toLowerCase();
   renderProducts(products.filter(p =>
-    p.name.toLowerCase().includes(low) ||
-    p.sku.toLowerCase().includes(low) ||
-    (p.barcode && p.barcode.includes(low))
+    String(p.name).toLowerCase().includes(low) ||
+    String(p.sku).toLowerCase().includes(low) ||
+    String(p.barcode || '').includes(low)
   ));
 }
 
@@ -345,26 +314,23 @@ function renderProducts(list) {
     return;
   }
   grid.innerHTML = list.map(p => {
-    const low = p.stock_qty <= p.low_stock_threshold;
-    const stockCls = low ? 'text-red-600 low-stock' : 'text-slate-500';
+    const low = Number(p.stock_qty) <= Number(p.low_stock_threshold);
     return `
       <button onclick="addToCart(${p.id})" class="product-card touch-btn bg-white border border-slate-200 rounded-xl p-3 text-left shadow-sm hover:shadow-md hover:border-brand-300 transition">
         <div class="font-medium text-sm leading-tight line-clamp-2 mb-1">${esc(p.name)}</div>
         <div class="text-brand-700 font-bold">${fmt(p.unit_price)}</div>
-        <div class="text-xs ${stockCls} mt-1">${p.stock_qty} ${p.unit}${low ? ' ⚠️' : ''}</div>
-        ${p.size || p.color ? `<div class="text-xs text-slate-400 mt-0.5">${[p.size,p.color].filter(Boolean).join(' / ')}</div>` : ''}
+        <div class="text-xs ${low ? 'text-red-600 low-stock' : 'text-slate-500'} mt-1">${p.stock_qty} ${p.unit || 'pcs'}${low ? ' ⚠️' : ''}</div>
       </button>`;
   }).join('');
 }
 
-// ─── Cart ─────────────────────────────────────────────────
 function addToCart(itemId) {
-  const item = products.find(p => p.id === itemId);
+  const item = products.find(p => p.id == itemId);
   if (!item) return;
-  if (item.stock_qty <= 0) return toast('Out of stock', true);
-  const existing = cart.find(c => c.item.id === itemId);
+  if (Number(item.stock_qty) <= 0) return toast('Out of stock', true);
+  const existing = cart.find(c => c.item.id == itemId);
   if (existing) existing.qty += 1;
-  else cart.push({ item, qty: 1, discount: 0 });
+  else cart.push({ item, qty: 1 });
   renderCart();
 }
 
@@ -389,20 +355,20 @@ function renderCart() {
     el.innerHTML = '<p class="text-center text-slate-400 py-8 text-sm">Cart is empty</p>';
   } else {
     el.innerHTML = cart.map((c, i) => `
-      <div class="cart-item bg-white rounded-lg p-2.5 border border-slate-100 flex gap-2 items-center">
+      <div class="bg-white rounded-lg p-2.5 border border-slate-100 flex gap-2 items-center">
         <div class="flex-1 min-w-0">
           <div class="text-sm font-medium truncate">${esc(c.item.name)}</div>
           <div class="text-xs text-slate-500">${fmt(c.item.unit_price)} × ${c.qty}</div>
         </div>
         <div class="flex items-center gap-1">
-          <button onclick="changeQty(${i},-1)" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-lg leading-none">−</button>
+          <button onclick="changeQty(${i},-1)" class="w-8 h-8 rounded-full bg-slate-100 text-lg">−</button>
           <span class="w-6 text-center text-sm font-medium">${c.qty}</span>
-          <button onclick="changeQty(${i},1)" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-lg leading-none">+</button>
+          <button onclick="changeQty(${i},1)" class="w-8 h-8 rounded-full bg-slate-100 text-lg">+</button>
         </div>
         <div class="text-sm font-semibold w-16 text-right">${fmt(c.item.unit_price * c.qty)}</div>
       </div>`).join('');
   }
-  const sub = cart.reduce((s,c) => s + c.item.unit_price * c.qty, 0);
+  const sub = cart.reduce((s,c) => s + Number(c.item.unit_price) * c.qty, 0);
   const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
   const tax = (sub - discount) * VAT;
   const total = sub - discount + tax;
@@ -411,10 +377,9 @@ function renderCart() {
   document.getElementById('cart-total').textContent = fmt(total) + ' ' + CURRENCY;
 }
 
-// ─── Checkout ─────────────────────────────────────────────
 function openCheckout() {
   if (!cart.length) return toast('Cart is empty', true);
-  const sub = cart.reduce((s,c) => s + c.item.unit_price * c.qty, 0);
+  const sub = cart.reduce((s,c) => s + Number(c.item.unit_price) * c.qty, 0);
   const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
   const total = sub - discount + (sub - discount) * VAT;
   document.getElementById('checkout-total').textContent = fmt(total) + ' ' + CURRENCY;
@@ -444,20 +409,18 @@ function selectPay(method) {
 }
 
 async function completeCheckout() {
-  const sub = cart.reduce((s,c) => s + c.item.unit_price * c.qty, 0);
+  const sub = cart.reduce((s,c) => s + Number(c.item.unit_price) * c.qty, 0);
   const discount = parseFloat(document.getElementById('cart-discount').value) || 0;
   const total = sub - discount + (sub - discount) * VAT;
 
   const body = {
     items: cart.map(c => ({
-      item_id: c.item.id,
+      item_id: Number(c.item.id),
       quantity: c.qty,
-      unit_price: c.item.unit_price,
-      discount: c.discount || 0
+      unit_price: Number(c.item.unit_price)
     })),
     payment_method: currentPay,
     discount_amount: discount,
-    is_offline: !navigator.onLine,
     amount_cash: 0, amount_telebirr: 0, amount_mpesa: 0, amount_idda: 0, amount_card: 0
   };
 
@@ -495,30 +458,23 @@ async function completeCheckout() {
     toast(`Sale complete! Ref: ${txn.reference}`);
     clearCart();
     closeCheckout();
-    await loadProducts(); // refresh stock
+    await loadProducts();
   } catch (e) {
     toast(e.message, true);
   }
 }
 
-function holdTicket() {
-  if (!cart.length) return toast('Cart empty', true);
-  toast('Ticket held (local only for demo)');
-  // In production would POST with hold:true
-}
-
-// ─── Inventory ────────────────────────────────────────────
 function renderInventory() {
   const tbody = document.getElementById('inventory-table');
   tbody.innerHTML = products.map(p => {
-    const low = p.stock_qty <= p.low_stock_threshold;
+    const low = Number(p.stock_qty) <= Number(p.low_stock_threshold);
     return `<tr class="hover:bg-slate-50">
       <td class="px-4 py-2.5 font-mono text-xs">${esc(p.sku)}</td>
       <td class="px-4 py-2.5">${esc(p.name)}</td>
       <td class="px-4 py-2.5 text-slate-500">${esc(p.category)}</td>
       <td class="px-4 py-2.5 text-right font-medium">${fmt(p.unit_price)}</td>
       <td class="px-4 py-2.5 text-right ${low ? 'text-red-600 font-semibold' : ''}">${p.stock_qty}</td>
-      <td class="px-4 py-2.5">${p.unit}</td>
+      <td class="px-4 py-2.5">${p.unit || 'pcs'}</td>
       <td class="px-4 py-2.5">
         <button onclick="editItem(${p.id})" class="text-brand-600 hover:underline text-xs mr-2">Edit</button>
         <button onclick="quickAddStock(${p.id})" class="text-slate-500 hover:underline text-xs">+Stock</button>
@@ -542,9 +498,6 @@ function openItemModal(item = null) {
   document.getElementById('item-low').value = item?.low_stock_threshold || 5;
   document.getElementById('item-size').value = item?.size || '';
   document.getElementById('item-color').value = item?.color || '';
-  document.getElementById('item-batch').checked = item?.requires_batch || false;
-  document.getElementById('item-expiry').checked = item?.requires_expiry || false;
-  document.getElementById('item-recipe').checked = item?.is_recipe || false;
   document.getElementById('item-modal').classList.remove('hidden');
   document.getElementById('item-modal').classList.add('flex');
 }
@@ -555,7 +508,7 @@ function closeItemModal() {
 }
 
 function editItem(id) {
-  const item = products.find(p => p.id === id);
+  const item = products.find(p => p.id == id);
   if (item) openItemModal(item);
 }
 
@@ -574,9 +527,6 @@ async function saveItem(e) {
     low_stock_threshold: parseFloat(document.getElementById('item-low').value) || 5,
     size: document.getElementById('item-size').value || null,
     color: document.getElementById('item-color').value || null,
-    requires_batch: document.getElementById('item-batch').checked,
-    requires_expiry: document.getElementById('item-expiry').checked,
-    is_recipe: document.getElementById('item-recipe').checked,
   };
   try {
     const url = id ? `/api/items/${id}` : '/api/items';
@@ -610,7 +560,6 @@ async function quickAddStock(id) {
   }
 }
 
-// ─── Credit / Idda ────────────────────────────────────────
 async function loadCustomers() {
   try {
     const res = await fetch(API + '/api/customers');
@@ -635,10 +584,9 @@ async function loadCreditBalances() {
         <div class="font-semibold">${esc(b.customer_name)}</div>
         <div class="text-xs text-slate-500 mb-2">${b.phone || ''}</div>
         <div class="text-2xl font-bold text-red-600">${fmt(b.current_balance)} ${CURRENCY}</div>
-        <div class="text-xs text-slate-400 mt-1">Limit: ${fmt(b.credit_limit)} · Available: ${fmt(b.available_credit)}</div>
-        <div class="mt-3 flex gap-2">
-          <button onclick="repayCredit(${b.customer_id})" class="flex-1 text-xs bg-brand-100 text-brand-800 py-1.5 rounded-lg hover:bg-brand-200">Record Payment</button>
-          <button onclick="remindCustomer('${esc(b.customer_name)}', ${b.current_balance}, '${b.phone || ''}')" class="flex-1 text-xs bg-slate-100 py-1.5 rounded-lg hover:bg-slate-200">Remind</button>
+        <div class="text-xs text-slate-400 mt-1">Limit: ${fmt(b.credit_limit)}</div>
+        <div class="mt-3">
+          <button onclick="repayCredit(${b.customer_id})" class="w-full text-xs bg-brand-100 text-brand-800 py-1.5 rounded-lg hover:bg-brand-200">Record Payment</button>
         </div>
       </div>`).join('');
   } catch (e) {
@@ -657,17 +605,6 @@ async function repayCredit(customerId) {
   } catch (e) {
     toast(e.message, true);
   }
-}
-
-function remindCustomer(name, balance, phone) {
-  const msg = `Dear ${name}, your outstanding balance is ${fmt(balance)} ${CURRENCY}. Please settle at your earliest convenience. Thank you!`;
-  if (phone) {
-    // Pre-fill SMS / Telegram style
-    const sms = `sms:${phone}?body=${encodeURIComponent(msg)}`;
-    window.open(sms, '_blank');
-  }
-  navigator.clipboard?.writeText(msg);
-  toast('Reminder copied to clipboard' + (phone ? ' & SMS opened' : ''));
 }
 
 function openCustomerModal() {
@@ -702,7 +639,6 @@ async function saveCustomer(e) {
   }
 }
 
-// ─── Analytics ────────────────────────────────────────────
 async function loadAnalytics() {
   try {
     const res = await fetch(API + '/api/transactions/today');
@@ -725,9 +661,6 @@ async function loadAnalytics() {
         <div class="text-xs text-slate-500 uppercase">Idda Outstanding</div>
         <div class="text-2xl font-bold text-red-600">${fmt(data.total_credit_outstanding)}</div>
       </div>`;
-    document.getElementById('top-items').innerHTML = data.top_items.length
-      ? data.top_items.map((t,i) => `<li class="flex justify-between"><span>${i+1}. ${esc(t.name)}</span><span class="font-medium">${fmt(t.sales)}</span></li>`).join('')
-      : '<li class="text-slate-400">No sales yet today</li>';
     document.getElementById('low-stock').innerHTML = data.low_stock_alerts.length
       ? data.low_stock_alerts.map(a => `<li class="flex justify-between text-red-600"><span>${esc(a.name)}</span><span>${a.stock_qty} ${a.unit}</span></li>`).join('')
       : '<li class="text-slate-400">All stock levels OK</li>';
@@ -736,7 +669,6 @@ async function loadAnalytics() {
   }
 }
 
-// ─── Mode ─────────────────────────────────────────────────
 async function loadMode() {
   try {
     const res = await fetch(API + '/api/system/mode');
@@ -760,7 +692,6 @@ async function changeMode(mode) {
   }
 }
 
-// ─── Helpers ──────────────────────────────────────────────
 function fmt(n) {
   return Number(n).toLocaleString('en-ET', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
